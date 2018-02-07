@@ -1,4 +1,4 @@
-name := "ScalaSparkTitanicProject"
+name := "ForestCoverScalaSparkProject"
 
 version := "1.0"
 
