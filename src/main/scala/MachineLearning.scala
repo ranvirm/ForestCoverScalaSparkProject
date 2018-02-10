@@ -1,7 +1,6 @@
 import FeatureEngineering.FeatureData
 import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.classification.{RandomForestClassifier}
-import org.apache.spark.ml.classification.RandomForestClassificationModel
+import org.apache.spark.ml.classification.{RandomForestClassifier, RandomForestClassificationModel}
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.feature.{IndexToString, StringIndexer, VectorAssembler, VectorIndexer}
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
@@ -28,59 +27,93 @@ object MachineLearning {
 
     val inputDataWithFeatureVector = featureAssembler.transform(inputData)
 
-    // def label indexer
+    // define label indexer
     val labelIndexer = new StringIndexer()
       .setInputCol("label")
       .setOutputCol("indexedLabels")
       .fit(inputDataWithFeatureVector)
 
-    // def features indexer
+    // define features indexer
     val featureIndexer = new VectorIndexer()
       .setInputCol("features")
       .setOutputCol("indexedFeatures")
       .fit(inputDataWithFeatureVector)
 
     // split data into train and test
-    val Array(trainData, testData) = inputDataWithFeatureVector.randomSplit(weights = Array[Double](0.7, 0.3))
+    val Array(trainData, testData) = inputDataWithFeatureVector.randomSplit(weights = Array[Double](0.05, 0.1))
 
-    // Def RandomForest model
+    //  define randomForest model
     val rf = new RandomForestClassifier()
       .setLabelCol("indexedLabels")
       .setFeaturesCol("indexedFeatures")
-      .setNumTrees(20)
-      .setMaxDepth(30)
-      .setImpurity("entropy")
       .setSeed(1L)
+      //.setNumTrees(20)
+      //.setMaxDepth(30)
+      .setImpurity("entropy")
 
-    // Convert indexed labels back to original labels
+    // define function to convert indexed labels back to original labels
     val labelConverter = new IndexToString()
       .setInputCol("prediction")
       .setOutputCol("predictedLabel")
       .setLabels(labelIndexer.labels)
 
-    // Chain indexers and forest in a Pipeline
+    // define pipeline model
     val pipeline = new Pipeline()
       .setStages(Array(labelIndexer, featureIndexer, rf, labelConverter))
 
-    // Train model. This also runs the indexers
-    val model = pipeline.fit(trainData)
+    // define grid of parameters to search over
+    val paramGrid = new ParamGridBuilder()
+      .addGrid(rf.numTrees, Array[Int](5, 10, 20))
+      .addGrid(rf.maxDepth, Array[Int](15, 20, 25, 30))
+      //.addGrid(rf.impurity, Array[String]("gini", "entropy"))
+      .build()
 
-    // Make predictions
-    val predictions = model.transform(testData)
+    // define cross-validation model to run pipeline with param-search
+    val cv = new CrossValidator()
+      .setEstimator(pipeline)
+      .setEvaluator(new MulticlassClassificationEvaluator()
+        .setLabelCol("indexedLabels")
+        .setPredictionCol("prediction")
+        .setMetricName("accuracy"))
+      .setEstimatorParamMaps(paramGrid)
+      .setNumFolds(3)
+
+    // run cross-validation model and choose the best set of parameters for model
+    val cvModel = cv.fit(trainData)
+
+    // print params
+    println("******************************************************")
+    println("******************************************************")
+    println("******************************************************")
+    println(cvModel.explainParams())
+    println("******************************************************")
+    println("******************************************************")
+    println("******************************************************")
+
+    // use trained cv model to make predictions on test data
+    val predictions = cvModel.transform(testData)
+
+    // train model
+    //val model = pipeline.fit(trainData)
+
+    // use trained model to make predictions on test data
+    //val predictions = model.transform(testData)
 
     // feature importance
-    val featureImportance = model
-      .stages(2)
-      .asInstanceOf[RandomForestClassificationModel]
-      .featureImportances
+    //val featureImportance = model
+    //  .stages(2)
+    //  .asInstanceOf[RandomForestClassificationModel]
+    //  .featureImportances
 
     //println(featureImportance)
 
-    // Select (prediction, true label) and compute test error
+    // define evaluator to calculate test error
     val evaluator = new MulticlassClassificationEvaluator()
       .setLabelCol("indexedLabels")
       .setPredictionCol("prediction")
       .setMetricName("accuracy")
+
+    // calculate test error
     val accuracy = evaluator.evaluate(predictions)
 
     println("+++++++++++++++++")
