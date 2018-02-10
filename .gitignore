@@ -10,3 +10,4 @@ target/
 lib_managed/
 src_managed/
 project/
+metastore_db/
