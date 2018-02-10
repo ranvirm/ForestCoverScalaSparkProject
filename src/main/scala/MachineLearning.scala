@@ -1,8 +1,10 @@
 import FeatureEngineering.FeatureData
 import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.classification.{GBTClassifier, RandomForestClassifier}
+import org.apache.spark.ml.classification.{RandomForestClassifier}
+import org.apache.spark.ml.classification.RandomForestClassificationModel
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.feature.{IndexToString, StringIndexer, VectorAssembler, VectorIndexer}
+import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.sql.DataFrame
 
 // Do final data preparations for machine learning here
@@ -14,10 +16,10 @@ object MachineLearning {
   def MachineLearningOutput(): DataFrame = {
 
     // name 'survived' column as label column
-    val inputData = FeatureData().withColumnRenamed("Survived", "label")
+    val inputData = FeatureData().withColumnRenamed("Cover_Type", "label")
 
     // define feature columns
-    val featureCols = inputData.drop("PassengerId", "label", "Dataset").columns
+    val featureCols = inputData.drop("label").columns
 
     // define feature vector assembler
     val featureAssembler = new VectorAssembler()
@@ -45,15 +47,9 @@ object MachineLearning {
     val rf = new RandomForestClassifier()
       .setLabelCol("indexedLabels")
       .setFeaturesCol("indexedFeatures")
-      .setNumTrees(10)
+      .setNumTrees(20)
       .setMaxDepth(30)
-      .setSeed(1L)
-
-    // Def GBT model
-    val gbt = new GBTClassifier()
-      .setLabelCol("indexedLabels")
-      .setFeaturesCol("indexedFeatures")
-      .setMaxIter(100)
+      .setImpurity("entropy")
       .setSeed(1L)
 
     // Convert indexed labels back to original labels
@@ -64,7 +60,7 @@ object MachineLearning {
 
     // Chain indexers and forest in a Pipeline
     val pipeline = new Pipeline()
-      .setStages(Array(labelIndexer, featureIndexer, gbt, labelConverter))
+      .setStages(Array(labelIndexer, featureIndexer, rf, labelConverter))
 
     // Train model. This also runs the indexers
     val model = pipeline.fit(trainData)
@@ -72,13 +68,39 @@ object MachineLearning {
     // Make predictions
     val predictions = model.transform(testData)
 
+    // feature importance
+    val featureImportance = model
+      .stages(2)
+      .asInstanceOf[RandomForestClassificationModel]
+      .featureImportances
+
+    //println(featureImportance)
+
     // Select (prediction, true label) and compute test error
     val evaluator = new MulticlassClassificationEvaluator()
       .setLabelCol("indexedLabels")
       .setPredictionCol("prediction")
       .setMetricName("accuracy")
     val accuracy = evaluator.evaluate(predictions)
+
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
     println("Test Error = " + (1.0 - accuracy))
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
+    println("+++++++++++++++++")
 
     predictions
 

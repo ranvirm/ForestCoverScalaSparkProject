@@ -11,7 +11,10 @@ object DataSourcer {
     // get spark session
     val spark = Spark()
 
-    spark.read.parquet("./src/main/resources/covertype/")
+    // read data from parquet
+    spark
+      .read
+      .parquet("./src/main/resources/covertypedata/")
 
   }
 
