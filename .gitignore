@@ -5,6 +5,7 @@
 .cache/
 .history/
 .lib/
+derby.log
 dist/*
 target/
 lib_managed/
