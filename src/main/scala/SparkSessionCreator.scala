@@ -7,7 +7,7 @@ object SparkSessionCreator {
 
   def Spark(): SparkSession = {
 
-    SparkSession.builder().master("local").appName("ScalaProjectExample").getOrCreate()
+    SparkSession.builder().master("local").appName("CoverTypeScalaSparkProject").getOrCreate()
 
   }
 

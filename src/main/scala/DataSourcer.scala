@@ -11,8 +11,7 @@ object DataSourcer {
     // get spark session
     val spark = Spark()
 
-    // load train data from local
-    spark.read.option("header", "true").csv("./src/main/resources/train.csv")
+    spark.read.parquet("./src/main/resources/covertype/")
 
   }
 
