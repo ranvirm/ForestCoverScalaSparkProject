@@ -1,4 +1,4 @@
-import MachineLearning.RandomForestModel
+import MachineLearning.{RandomForestModel, RandomForestCVModel}
 import FeatureEngineering.KmeansBestBucketsCalculator
 import DataWrangler.WrangledData
 import org.apache.spark.sql.functions._

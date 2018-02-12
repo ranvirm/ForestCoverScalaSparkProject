@@ -80,13 +80,50 @@ object FeatureEngineering {
         .setOutputCol(inputColumn+"Bucket")
         .setNumBuckets(nBins)
 
-      discretizer.fit(dataFrame).transform(dataFrame).drop(inputColumn)
+      val outputDataFrame = discretizer.fit(dataFrame).transform(dataFrame)
+
+      outputDataFrame.withColumn(inputColumn+"Bucket", outputDataFrame(inputColumn+"Bucket").cast("String"))
 
     }
 
-    //ColumnDiscretizer(ColumnDiscretizer(ColumnDiscretizer(WrangledData(), "Hillshade_3pm", 10), "Hillshade_Noon", 10), "Hillshade_9am", 10)
+    // define function to create binary columns from input columns
+    def Binarizer(inputColumns: Array[String], dataFrame: DataFrame): DataFrame = {
 
-    ColumnDiscretizer("Aspect", 9,
+      // create mutable data frame to operate on
+      var inputDataFrame = dataFrame
+
+      for(column <- inputColumns) {
+
+        // create array of unique values in column
+        val uniqueValues = dataFrame.select(column).distinct().collect()
+
+        for(i <- uniqueValues.indices) {
+
+          // define name for new column as the unique value
+          var colName = uniqueValues(i).get(0)
+
+          // remove special characters from name for new column
+          colName = colName.toString.replaceAll("[.]", "_")
+
+          inputDataFrame = inputDataFrame
+            .withColumn(column+"_"+colName, when(inputDataFrame(column)===uniqueValues(i)(0), 1).otherwise(0))
+
+        }
+
+        inputDataFrame = inputDataFrame.drop(column)
+
+      }
+
+      val outputDataFrame = inputDataFrame
+
+      outputDataFrame
+
+    }
+
+    // bucket columns
+    //val bucketedDataFrame = ColumnDiscretizer("Hillshade_9am", 10, ColumnDiscretizer("Hillshade_Noon", 10, ColumnDiscretizer("Hillshade_3pm", 10, WrangledData())))
+
+    val bucketedDataFrame = ColumnDiscretizer("Aspect", 9,
       ColumnDiscretizer("Elevation", 11,
         ColumnDiscretizer("Slope", 6,
           ColumnDiscretizer("Hillshade_3pm", 9,
@@ -96,6 +133,23 @@ object FeatureEngineering {
                   ColumnDiscretizer("Horizontal_Distance_To_Roadways", 14,
                     ColumnDiscretizer("Horizontal_Distance_To_Fire_Points", 12,
                       ColumnDiscretizer("Vertical_Distance_To_Hydrology", 8, WrangledData()))))))))))
+
+    // convert bucketed columns to binary
+    //Binarizer(Array[String]("Hillshade_9amBucket", "Hillshade_NoonBucket", "Hillshade_3pmBucket"), bucketedDataFrame)
+
+    Binarizer(Array[String](
+      "AspectBucket",
+      "Hillshade_9amBucket",
+      "Hillshade_NoonBucket",
+      "Hillshade_3pmBucket",
+      "ElevationBucket",
+      "SlopeBucket",
+      "Horizontal_Distance_To_HydrologyBucket",
+      "Horizontal_Distance_To_RoadwaysBucket",
+      "Horizontal_Distance_To_Fire_PointsBucket",
+      "Vertical_Distance_To_HydrologyBucket"
+    ), bucketedDataFrame)
+
 
 
   }
