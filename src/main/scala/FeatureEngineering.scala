@@ -1,17 +1,79 @@
 import DataWrangler.WrangledData
-import org.apache.spark.ml.feature.{Bucketizer, QuantileDiscretizer}
+import org.apache.spark.ml.feature.{Bucketizer, QuantileDiscretizer, VectorAssembler}
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.sql.functions.{split, when}
 
 // Do your feature engineering here
 
 object FeatureEngineering {
 
+  // define kmeans model to use to find best number of buckets to split continuous features into
+  def KmeansBestBucketsCalculator(dataFrame: DataFrame, column: String): Unit = {
+
+    val inputData = dataFrame.select(column)
+
+    // define feature vector assembler
+    val featureAssembler = new VectorAssembler()
+      .setInputCols(inputData.columns)
+      .setOutputCol("features")
+
+    val clusterData = featureAssembler.transform(inputData)
+
+    // set max number of centers to test for equal to square root of number of distinct values
+    val maxCenters = math.sqrt(inputData.select(column).distinct().count()).toInt
+
+    // create array of centers to test
+    val testCenters = (2 to maxCenters).toArray
+
+    // create mutable array to store wssse values
+    var wssseArray = Array[Double]()
+
+    // run kmeans with each k in test centers, compute wssse and print
+    for(centers <- testCenters){
+
+      // define kmeans estimator
+      val kmeans = new KMeans().setK(centers).setSeed(1L)
+
+      // fit kmeans model to data
+      val model = kmeans.fit(clusterData)
+
+      // calculate within set sum of squared errors
+      val wssse = model.computeCost(clusterData)
+
+      // add current wssse to wssse array
+      wssseArray :+=  wssse
+
+    }
+
+    println("+++++++++++++++++++++++++++++++++")
+    println(s"Calculating for column : $column")
+    println("+++++++++++++++++++++++++++++++++")
+    println("K, WSSSE")
+
+    // print k and corresponding change in wssse score
+    for(i <- testCenters.indices){
+
+      // do not compute for centers equal to 2
+      if(i > 0) {
+
+        val wssseChange = math.log10(math.abs(wssseArray(i) - wssseArray(i-1)))
+
+        val k = testCenters(i)
+
+        println(s"$k,$wssseChange")
+
+      }
+
+    }
+
+  }
+
   // function that returns a data frame with added  features
   def FeatureData(): DataFrame = {
 
     // function to create bins for input columns
-    def ColumnDiscretizer(dataFrame: DataFrame, inputColumn: String, nBins: Int): DataFrame = {
+    def ColumnDiscretizer(inputColumn: String, nBins: Int, dataFrame: DataFrame): DataFrame = {
 
       val discretizer = new QuantileDiscretizer()
         .setInputCol(inputColumn)
@@ -22,7 +84,19 @@ object FeatureEngineering {
 
     }
 
-    ColumnDiscretizer(ColumnDiscretizer(ColumnDiscretizer(WrangledData(), "Hillshade_3pm", 10), "Hillshade_Noon", 10), "Hillshade_9am", 10)
+    //ColumnDiscretizer(ColumnDiscretizer(ColumnDiscretizer(WrangledData(), "Hillshade_3pm", 10), "Hillshade_Noon", 10), "Hillshade_9am", 10)
+
+    ColumnDiscretizer("Aspect", 9,
+      ColumnDiscretizer("Elevation", 11,
+        ColumnDiscretizer("Slope", 6,
+          ColumnDiscretizer("Hillshade_3pm", 9,
+            ColumnDiscretizer("Hillshade_9am", 10,
+              ColumnDiscretizer("Hillshade_Noon", 9,
+                ColumnDiscretizer("Horizontal_Distance_To_Hydrology", 10,
+                  ColumnDiscretizer("Horizontal_Distance_To_Roadways", 14,
+                    ColumnDiscretizer("Horizontal_Distance_To_Fire_Points", 12,
+                      ColumnDiscretizer("Vertical_Distance_To_Hydrology", 8, WrangledData()))))))))))
+
 
   }
 

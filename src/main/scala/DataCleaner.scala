@@ -10,7 +10,7 @@ object DataCleaner {
   // function to produce a clean data frame from a raw data frame
   def CleanData(): DataFrame = {
 
-    // function to convert column to type double
+    // function to convert input column/s to type double
     def DoubleType(dataFrame: DataFrame, column: String): DataFrame = {
 
       dataFrame.withColumn(column, dataFrame(column).cast("Double"))

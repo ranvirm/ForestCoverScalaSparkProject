@@ -11,10 +11,16 @@ object DataSourcer {
     // get spark session
     val spark = Spark()
 
+    spark.sparkContext.setLogLevel("ERROR")
+
     // read data from parquet
     spark
       .read
       .parquet("./src/main/resources/covertypedata/")
+
+    //val Array(trainData, testData) = data.randomSplit(weights = Array[Double](0.1, 0.9))
+
+    //trainData
 
   }
 

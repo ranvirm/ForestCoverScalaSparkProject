@@ -9,6 +9,8 @@ object SparkSessionCreator {
 
     SparkSession.builder().master("local[4]").appName("CoverTypeScalaSparkProject").getOrCreate()
 
+
+
   }
 
 }
