@@ -82,7 +82,7 @@ object FeatureEngineering {
 
       val outputDataFrame = discretizer.fit(dataFrame).transform(dataFrame)
 
-      outputDataFrame.withColumn(inputColumn+"Bucket", outputDataFrame(inputColumn+"Bucket").cast("String"))
+      outputDataFrame.withColumn(inputColumn+"Bucket", outputDataFrame(inputColumn+"Bucket").cast("String"))//.drop(inputColumn)
 
     }
 
@@ -149,8 +149,6 @@ object FeatureEngineering {
       "Horizontal_Distance_To_Fire_PointsBucket",
       "Vertical_Distance_To_HydrologyBucket"
     ), bucketedDataFrame)
-
-
 
   }
 
